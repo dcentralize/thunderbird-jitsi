@@ -8,7 +8,7 @@ const status = document.getElementById("status");
 browser.storage.local.get("settings").then(({ settings }) => {
   if (settings) {
     serverInput.value = settings.serverUrl;
-    includeTitleInput.checked = settings.includeEventTitle !== false;
+    includeTitleInput.checked = settings.includeEventTitle;
     prefixInput.value = settings.internalRoomPrefix;
     domainsInput.value = settings.internalEmailDomains.join("\n");
   }

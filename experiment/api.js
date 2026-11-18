@@ -95,10 +95,6 @@ var jitsiMeeting = class extends ChromeUtils.importESModule(
     };
 
     const onClick = () => {
-      if (location.disabled || location.readOnly) {
-        return;
-      }
-
       if (!this.settings?.serverUrl) {
         this.requestOptions();
         return;
