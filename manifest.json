@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Jitsi Calendar Links",
   "description": "Add a unique Jitsi meeting link to a calendar event.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "browser_specific_settings": {
     "gecko": {
       "id": "thunderbird-jitsi@d-centralize.nl",
