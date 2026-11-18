@@ -1,0 +1,88 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    container: node:26.13.1-trixie-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      UV_VERSION: "0.13.8"
+      THUNDERBIRD_VERSION: "159.0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check JavaScript
+        run: |
+          node --check experiment/api.js
+          node --check background.js
+          node --check options/options.js
+      - name: Install test tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl fonts-liberation libasound2t64 libdbus-glib-1-2 \
+            libgbm1 libgtk-3-0t64 libx11-xcb1 libxt6t64 python3 xauth xdotool xvfb xz-utils zip
+          curl --fail --location "https://astral.sh/uv/${UV_VERSION}/install.sh" --output /tmp/uv-install.sh
+          UV_INSTALL_DIR=/usr/local/bin sh /tmp/uv-install.sh
+      - name: Install Thunderbird
+        run: |
+          mkdir -p /tmp/thunderbird-download/linux-x86_64/en-US
+          curl --fail --location \
+            "https://archive.mozilla.org/pub/thunderbird/releases/${THUNDERBIRD_VERSION}/linux-x86_64/en-US/thunderbird-${THUNDERBIRD_VERSION}.tar.xz" \
+            --output "/tmp/thunderbird-download/linux-x86_64/en-US/thunderbird-${THUNDERBIRD_VERSION}.tar.xz"
+          curl --fail --location \
+            "https://archive.mozilla.org/pub/thunderbird/releases/${THUNDERBIRD_VERSION}/SHA512SUMS" \
+            --output /tmp/thunderbird-download/SHA512SUMS
+          (cd /tmp/thunderbird-download && sha512sum --check --ignore-missing SHA512SUMS)
+          tar --extract --xz --file "/tmp/thunderbird-download/linux-x86_64/en-US/thunderbird-${THUNDERBIRD_VERSION}.tar.xz" --directory /opt
+      - name: Package add-on
+        run: >-
+          zip -q thunderbird-jitsi.xpi manifest.json LICENSE background.js
+          experiment/schema.json experiment/api.js options/options.html options/options.js
+      - name: Test in Thunderbird
+        run: >-
+          runuser --user node -- xvfb-run -a uv run --locked --script tests/calendar_editor.py
+          --binary /opt/thunderbird/thunderbird
+          --addon "$GITHUB_WORKSPACE/thunderbird-jitsi.xpi"
+      - name: Prepare release files
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { createHash } = require('node:crypto');
+          const { version, browser_specific_settings: { gecko } } = require('./manifest.json');
+          const releases = 'https://github.com/dcentralize/thunderbird-jitsi/releases';
+          if (gecko.update_url !== `${releases}/latest/download/updates.json`) {
+            throw new Error('The add-on must use the GitHub release update feed');
+          }
+          if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME !== `v${version}`) {
+            throw new Error('The release tag must match the manifest version');
+          }
+          const filename = `thunderbird-jitsi-${version}.xpi`;
+          fs.renameSync('thunderbird-jitsi.xpi', filename);
+          const update = {
+            version,
+            update_link: `${releases}/download/v${version}/${filename}`,
+            update_hash: `sha256:${createHash('sha256').update(fs.readFileSync(filename)).digest('hex')}`,
+            applications: { gecko: { strict_min_version: gecko.strict_min_version } }
+          };
+          fs.writeFileSync('updates.json', JSON.stringify({ addons: { [gecko.id]: { updates: [update] } } }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: thunderbird-jitsi
+          path: |
+            thunderbird-jitsi-*.xpi
+            updates.json
+          if-no-files-found: error

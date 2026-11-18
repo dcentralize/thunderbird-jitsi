@@ -1,0 +1,32 @@
+{
+  "manifest_version": 2,
+  "name": "Jitsi Calendar Links",
+  "description": "Add a unique Jitsi meeting link to a calendar event.",
+  "version": "0.3.0",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "thunderbird-jitsi@d-centralize.nl",
+      "strict_min_version": "159.0",
+      "update_url": "https://github.com/dcentralize/thunderbird-jitsi/releases/latest/download/updates.json"
+    }
+  },
+  "permissions": ["storage"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "experiment_apis": {
+    "jitsiMeeting": {
+      "schema": "experiment/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "script": "experiment/api.js",
+        "events": ["startup"],
+        "paths": [["jitsiMeeting"]]
+      }
+    }
+  }
+}

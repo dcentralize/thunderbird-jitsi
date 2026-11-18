@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Jitsi Calendar Links settings</title>
+    <style>
+      body { font: menu; color-scheme: light dark; margin: 2em; }
+      main { max-width: 38em; }
+      label { display: block; margin-top: 1.5em; font-weight: bold; }
+      input:not([type="checkbox"]), textarea { box-sizing: border-box; width: 100%; margin-top: 0.5em; }
+      p { line-height: 1.5; }
+      button { margin-top: 1em; }
+    </style>
+    <script src="options.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <h1>Jitsi Calendar Links settings</h1>
+      <form id="settings-form">
+        <label for="server-url">Jitsi server URL</label>
+        <input id="server-url" type="url" required placeholder="https://meet.example.org/" />
+        <p>Use your server's HTTPS address, including its path if needed.</p>
+
+        <label><input id="include-event-title" type="checkbox" checked /> Include event title in meeting link</label>
+        <p>Displays the event title in Jitsi. Turn off for a clean meeting link.</p>
+
+        <label for="internal-room-prefix">Internal room prefix (optional)</label>
+        <input id="internal-room-prefix" type="text" />
+        <p>Use only if your server treats rooms with this prefix as internal.</p>
+
+        <label for="internal-email-domains">Internal email domains (optional)</label>
+        <textarea id="internal-email-domains" rows="4" placeholder="example.org"></textarea>
+        <p>One domain per line. When every attendee matches, the add-on suggests an internal meeting. You can choose an external meeting.</p>
+
+        <button type="submit">Save settings</button>
+        <p id="status" role="status"></p>
+      </form>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+[
+  {
+    "namespace": "jitsiMeeting",
+    "description": "Add Jitsi meeting links in the calendar event editor.",
+    "types": [
+      {
+        "id": "Settings",
+        "type": "object",
+        "properties": {
+          "serverUrl": { "type": "string" },
+          "includeEventTitle": { "type": "boolean", "optional": true, "default": true },
+          "internalRoomPrefix": { "type": "string" },
+          "internalEmailDomains": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    ],
+    "functions": [
+      {
+        "name": "configure",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          { "name": "settings", "$ref": "Settings", "optional": true }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "name": "onOptionsRequested",
+        "type": "function",
+        "parameters": []
+      }
+    ]
+  }
+]
