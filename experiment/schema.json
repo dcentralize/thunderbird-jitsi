@@ -8,7 +8,7 @@
         "type": "object",
         "properties": {
           "serverUrl": { "type": "string" },
-          "includeEventTitle": { "type": "boolean", "optional": true, "default": true },
+          "includeEventTitle": { "type": "boolean" },
           "internalRoomPrefix": { "type": "string" },
           "internalEmailDomains": {
             "type": "array",

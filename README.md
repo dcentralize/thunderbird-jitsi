@@ -12,7 +12,7 @@ Save and send the event using Thunderbird's usual controls.
 
 ## Install and configure
 
-Requires Thunderbird 159 or later. Download the XPI from the
+Requires Thunderbird 153 or later. Download the XPI from the
 [latest GitHub release](https://github.com/dcentralize/thunderbird-jitsi/releases/latest),
 then install it through **Add-ons and Themes → Install Add-on From File**.
 Subsequent versions use Thunderbird's native automatic updates.

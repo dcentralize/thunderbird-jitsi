@@ -6,7 +6,7 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "thunderbird-jitsi@d-centralize.nl",
-      "strict_min_version": "159.0",
+      "strict_min_version": "153.0",
       "update_url": "https://github.com/dcentralize/thunderbird-jitsi/releases/latest/download/updates.json"
     }
   },

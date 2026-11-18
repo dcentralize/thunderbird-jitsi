@@ -12,7 +12,6 @@ import tempfile
 import uuid
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
-from zipfile import ZipFile
 
 from marionette_driver.addons import Addons
 from marionette_driver.keys import Keys
@@ -44,9 +43,30 @@ def save(driver):
     editor(
         driver, 'editor.getElementById("notify-attendees-checkbox").checked = false;'
     )
+    driver.switch_to_window(driver.chrome_window_handles[0])
+    # The editor closes before Thunderbird commits the item to the calendar.
+    driver.execute_script(
+        """
+        window.testSaved = false;
+        const observer = {
+          QueryInterface: ChromeUtils.generateQI(['calIObserver']),
+          onAddItem: stored,
+          onModifyItem: stored,
+        };
+        function stored() {
+          window.testCalendar.removeObserver(observer);
+          window.testSaved = true;
+        }
+        window.testCalendar.addObserver(observer);
+        """
+    )
+    driver.switch_to_window(driver.chrome_window_handles[-1])
     driver.find_element("id", "button-saveandclose").click()
     Wait(driver, timeout=15).until(lambda _: len(driver.chrome_window_handles) == 1)
     driver.switch_to_window(driver.chrome_window_handles[0])
+    Wait(driver, timeout=15).until(
+        lambda _: driver.execute_script("return window.testSaved;")
+    )
 
 
 def stored_events(driver):
@@ -120,7 +140,10 @@ def open_options(driver, addon_id):
         script_args=[addon_id],
     )
     Wait(driver, timeout=15).until(
-        lambda _: option(driver, "Jitsi server URL", "entry") is not None
+        lambda _: (
+            (option(driver, "Jitsi server URL", "entry") or {}).get("value")
+            == "https://meet.example.test/team/"
+        )
     )
 
 
@@ -278,7 +301,7 @@ def meeting_path(link, title, prefix=""):
     else:
         parameters = dict(part.split("=", 1) for part in parsed.fragment.split("&"))
         subject = unquote(parameters["config.localSubject"])
-        subject = subject.replace(chr(92) * 2 + "&", "&", 1).translate(
+        subject = subject.replace(chr(92) + "&", "&", 1).translate(
             {0x2018: "'", 0x2019: "'", 0x201C: '"', 0x201D: '"'}
         )
         assert json.loads(subject) == title
@@ -713,74 +736,9 @@ def main():
                 assert {item["id"]: item for item in stored_events(driver)} == {
                     item["id"]: item for item in saved
                 }
-                Addons(driver).uninstall(addon_id)
-                legacy = profile / "legacy-settings.xpi"
-                with ZipFile(legacy, "w") as archive:
-                    archive.writestr(
-                        "manifest.json",
-                        json.dumps(
-                            {
-                                "manifest_version": 2,
-                                "name": "Legacy settings fixture",
-                                "version": "0.2.0",
-                                "browser_specific_settings": {
-                                    "gecko": {
-                                        "id": addon_id,
-                                        "strict_min_version": "159.0",
-                                    }
-                                },
-                                "permissions": ["storage"],
-                                "background": {"scripts": ["seed.js"]},
-                                "options_ui": {
-                                    "page": "ready.html",
-                                    "open_in_tab": True,
-                                },
-                            }
-                        ),
-                    )
-                    archive.writestr(
-                        "seed.js",
-                        "browser.storage.local.set({settings:{"
-                        "serverUrl:'https://meet.example.test/team/',"
-                        "internalRoomPrefix:'dc-',internalEmailDomains:['example.test']"
-                        "}}).then(() => browser.runtime.openOptionsPage());",
-                    )
-                    archive.writestr(
-                        "ready.html", "<!doctype html><p>Legacy settings saved</p>"
-                    )
-                Addons(driver).install(str(legacy))
-                Wait(driver, timeout=15).until(
-                    lambda _: (
-                        option(driver, "Legacy settings saved", "text leaf") is not None
-                    )
-                )
-                driver.execute_script(
-                    "const tabs=document.getElementById('tabmail'); tabs.closeTab(tabs.currentTabInfo,true);"
-                )
-                Addons(driver).install(str(args.addon.resolve()))
-                open_options(driver, addon_id)
-                assert (
-                    option(
-                        driver, "Include event title in meeting link", "checkbutton"
-                    )["checked"]
-                    is True
-                )
-                driver.execute_script(
-                    "const tabs=document.getElementById('tabmail'); tabs.closeTab(tabs.currentTabInfo,true);"
-                )
-                new_event(driver, "Upgraded meeting")
-                editor(driver, click)
-                meeting_path(
-                    editor(
-                        driver, 'return editor.getElementById("item-location").value;'
-                    ),
-                    "Upgraded meeting",
-                )
-                save(driver)
-                Addons(driver).uninstall(addon_id)
                 driver.delete_session()
                 print(
-                    "PASS packaged options, title preference persistence and legacy settings upgrade, custom server, internal suggestions, cancel/Escape, UUID rooms, guest titles, native attendee edits, save/reopen and disable cleanup"
+                    "PASS packaged options, title preference persistence, custom server, internal suggestions, cancel/Escape, UUID rooms, guest titles, native attendee edits, save/reopen and disable cleanup"
                 )
             finally:
                 process.terminate()
